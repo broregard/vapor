@@ -31,14 +31,7 @@ button {
   display: flex;
   width: 100%;
   background: black;
-}
-@keyframes bg {
-  0%{
-      background-position: 0 8px;
-  }
-  100%{
-     background-position: 0 0;
-  }
+  color: white;
 }
     </style>
 
@@ -67,7 +60,14 @@ button {
 
     <script >
       var viz;
+
+const playlist = {
+  "golden gal": "https://dl.dropboxusercontent.com/s/4li5qc35oiqm8sf/goldengal.mp3",
+  "floridada": "https://dl.dropboxusercontent.com/s/szgt5guo7lopubc/FloriDada.mp3"
+};
+
 var VizCtrl = function() {
+  this.song = "";
   this.spread = 3;
   this.width = 40;
   this.sphereFrequency = 10;
@@ -86,9 +86,12 @@ var VizCtrl = function() {
       o.geometry.verticesNeedUpdate = true;
   }
 };
-window.onload = function() {
+
+
   viz = new VizCtrl();
+
   var gui = new dat.GUI();
+  gui.add(viz, "song", playlist).onChange(fetchSong);
   gui.add(viz, 'sphereFrequency', 0, 40).step(1)
   gui.add(viz, 'spread', 1, 10).step(1)
   gui.add(viz, 'width', 10, 80).step(1)
@@ -98,7 +101,9 @@ window.onload = function() {
   gui.add(viz, 'animCrunch')
   gui.add(viz, "resetPlane")
   gui.close();
-}
+
+
+
 //////////////////////////////////////////////////////
 // Set up scene
 let scene = new THREE.Scene();
@@ -108,37 +113,55 @@ let camera = new THREE.PerspectiveCamera(
 );
 scene.add(camera);
 camera.rotation.x = Math.PI/180*90
+
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild( renderer.domElement );
+
 var controls = new THREE.OrbitControls(camera, renderer.domElement);
+
 //////////////////////////////////////////////////////
 // on window resize
 window.addEventListener('resize', onWindowResize, false);
+
 function onWindowResize(){
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
 }
+
+
 //////////////////////////////////////////////////////
 // btn fx stuff
 let o, o1, l1, circle,
     counter = 0,planeCounter = 0, increase = .06;
+
 let initVerts = [];
+
+
+
 //////////////////////////////////////////////////////
 // audio stuff
 const audio = document.querySelector("audio");
 const vert = [];
 const url = "https://dl.dropboxusercontent.com/s/4li5qc35oiqm8sf/goldengal.mp3";
-fetch(url).then(mp3 => mp3.blob()).then(mp3 => {
+
+function fetchSong() {
+  fetch(viz.song).then(mp3 => mp3.blob()).then(mp3 => {
     let allowAudio = () => {doMusic(mp3), window.removeEventListener("click", allowAudio)};
     window.addEventListener("click", allowAudio)
-});
+  });
+}
+
+
+
 file.onchange = function() {
   doMusic(this.files[0]);
 }
+
 function clamp(num, min, max) {
   return num <= min ? min : num >= max ? max : num;
 }
+
 function doMusic(mp3) {
   let audioContext = window.webkitAudioContext || window.AudioContext;
   let files = this.files;
@@ -150,16 +173,21 @@ function doMusic(mp3) {
   let context = new audioContext();
   let src = context.createMediaElementSource(audio);
   let analyser = context.createAnalyser();
+
   src.connect(analyser);
   analyser.connect(context.destination);
+
   let bufferLength = analyser.frequencyBinCount;
   let frequencyData = new Uint8Array(bufferLength);
+
   createScene()
+
   function createScene(){
     createPlane();
     createCircle();
     createLight();
   }
+
   function createPlane() {
     let g = new THREE.PlaneGeometry(200,200,40,40);
     let m = new THREE.MeshStandardMaterial({flatShading:1,
@@ -173,17 +201,21 @@ function doMusic(mp3) {
     o.rotation.x = Math.PI * 270 / 180;
     o.position.y = -5;
     scene.add(o);
+
  
     // Distort plane
     for (let x = 0; x < o.geometry.vertices.length; x++) {
       let v = o.geometry.vertices[x];
       let distanceFromCenterY = Math.abs(v.x)/100;
+
       v.z += distanceFromCenterY > .2 ? 
         (Math.random() * (20 - .15) + .15) * distanceFromCenterY*2 : 
       ((Math.random() * (.8 - .2) + .2) + distanceFromCenterY);
+
       vert[x] = v;
       initVerts[x] = v.x;
     }
+
     //create separate wireframe
     let wireframe = o.clone();
     wireframe.material = new THREE.MeshBasicMaterial({wireframe:true,
@@ -191,58 +223,78 @@ function doMusic(mp3) {
     scene.add(wireframe)
     wireframe.scale.multiplyScalar(1.001);
   }
+
   function createCircle() {
     let g1 = new THREE.SphereGeometry( 22, 20, 20 );
     let m1 = new THREE.MeshBasicMaterial( { color: 0xff00ff,wireframe:false } );
     o1 = new THREE.Mesh( g1, m1 );
     o1.position.z = -130;
     scene.add( o1 );
+
     camera.position.z = -20;
     controls.target.set(0,0,-100)
     controls.update();
   }
+
   function createLight() {
     l1 = new THREE.SpotLight( 0xff00ff ,5,150,10,0,2);
     let l2 = new THREE.HemisphereLight( 0x000000, 0xffffff, 1 );
     let l3 = new THREE.PointLight( 0xff00ff,.6, 250 );
+
     l1.position.set( 0, 50, -130 );
     l1.lookAt(o1)
+
     l3.position.set(0, 50, -150 );
+
     scene.add(l1)
     scene.add( l2 );
     scene.add( l3 );
   }
+
   function visualize() {
     analyser.getByteFrequencyData(frequencyData);
+
     if (viz.animSphere || viz.animWave || viz.animCrunch ) {
+
       avg = frequencyData[viz.sphereFrequency]/200 ;
       avg *= avg;
+
       viz.animSphere ? (o1.scale.set(avg+.001,avg+.001,avg+.001),
             l1.intensity = avg*avg*20) : 0;
+
       planeSine = Math.sin(planeCounter);
       let f1 = frequencyData[1]
+
       for (let x = 0; x < o.geometry.vertices.length; x++) {
         let v = o.geometry.vertices[x];
+
         viz.animWave ? v.z = 1 + Math.abs(Math.sin( (v.z) / viz.width ) * (frequencyData[Math.floor(x/viz.spread)] * (vert[x].x/100) * 2 - 2)) / 3 : 0;
         
         v.z = clamp (v.z, 0, viz.limit)
        
         viz.animCrunch ? v.x += Math.sin(planeCounter) * (f1)*.00005  * v.x : 0;
+
       }  
       o.geometry.computeFaceNormals();	
       o.geometry.normalsNeedUpdate = true;  
       o.geometry.verticesNeedUpdate = true;
+
       counter += increase;
     }
     planeCounter += .06;
   }
+
+  //////////////////////////////////////////////////////
   // Render it
   let count = 1;
   let countInterval = Math.PI / 250; 
+
   
   function render() {
     let sin = Math.sin(count * .55) * .6;
     camera.translateZ(sin);
+
+
     
     count += countInterval;
     visualize()
