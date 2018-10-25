@@ -33,6 +33,18 @@ button {
   background: black;
   color: white;
 }
+.overlay {
+  position: absolute;
+  height: 100vh;
+  width: 100vw;
+  top: 0; left: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  font-family: sans-serif;
+  color: rgba(255,255,255,1);
+}
+        
     </style>
 
   
@@ -43,7 +55,7 @@ button {
 </head>
 
 <body translate="no" >
-
+<div class="overlay"><h1>Click anywhere to play</h1></div>
   <div class="bg"></div>
 
 
@@ -144,11 +156,17 @@ let initVerts = [];
 const audio = document.querySelector("audio");
 const vert = [];
 const url = "https://dl.dropboxusercontent.com/s/4li5qc35oiqm8sf/goldengal.mp3";
-
+const overlay = document.querySelector(".overlay");
+      
 function fetchSong() {
   fetch(viz.song).then(mp3 => mp3.blob()).then(mp3 => {
-    let allowAudio = () => {doMusic(mp3), window.removeEventListener("click", allowAudio)};
-    window.addEventListener("click", allowAudio)
+    audio.pause();
+    overlay.style.display = "flex";
+    window.addEventListener("click", function allowAudio() {
+      window.removeEventListener("click", allowAudio);
+      overlay.style.display = "none";
+      doMusic(mp3);
+    })
   });
 }
 
